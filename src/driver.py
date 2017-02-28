@@ -20,7 +20,7 @@ from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterf
 
 class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverInterface, GlobalLock):
     SUPPORTED_OS = [r'[Jj]uniper']
-    SHELL_NAME = "Juniper JunOS Router 2 Gen"
+    SHELL_NAME = "Juniper JunOS Router 2G"
     # SHELL_NAME = ""
 
     def __init__(self):
