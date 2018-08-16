@@ -3,17 +3,19 @@
 
 
 from cloudshell.devices.driver_helper import get_logger_with_thread_id, get_api, get_cli
-from cloudshell.devices.standards.networking.configuration_attributes_structure import create_networking_resource_from_context
+from cloudshell.devices.runners.run_command_runner import RunCommandRunner
+from cloudshell.devices.runners.state_runner import StateRunner
+from cloudshell.devices.standards.networking.configuration_attributes_structure import \
+    create_networking_resource_from_context
+from cloudshell.networking.juniper.cli.juniper_cli_handler import JuniperCliHandler
 from cloudshell.networking.juniper.runners.juniper_connectiviry_runner import \
     JuniperConnectivityRunner as ConnectivityRunner
 from cloudshell.networking.juniper.runners.juniper_configuration_runner import \
     JuniperConfigurationRunner as ConfigurationRunner
 from cloudshell.networking.juniper.runners.juniper_autoload_runner import JuniperAutoloadRunner as AutoloadRunner
 from cloudshell.networking.juniper.runners.juniper_firmware_runner import JuniperFirmwareRunner as FirmwareRunner
-from cloudshell.networking.juniper.runners.juniper_run_command_runner import JuniperRunCommandRunner as CommandRunner
-from cloudshell.networking.juniper.runners.juniper_state_runner import JuniperStateRunner as StateRunner
+from cloudshell.networking.juniper.snmp.juniper_snmp_handler import JuniperSnmpHandler
 from cloudshell.networking.networking_resource_driver_interface import NetworkingResourceDriverInterface
-from cloudshell.shell.core.context import ResourceCommandContext
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 
@@ -21,6 +23,7 @@ from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterf
 class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverInterface, GlobalLock):
     SUPPORTED_OS = [r'[Jj]uniper']
     SHELL_NAME = "Juniper JunOS Router 2G"
+
     # SHELL_NAME = ""
 
     def __init__(self):
@@ -57,10 +60,10 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
 
-        autoload_operations = AutoloadRunner(cli=self._cli,
-                                             logger=logger,
-                                             resource_config=resource_config,
-                                             api=api)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        snmp_handler = JuniperSnmpHandler(cli_handler, resource_config, logger, api)
+
+        autoload_operations = AutoloadRunner(cli_handler, snmp_handler, logger, resource_config)
         logger.info('Autoload started')
         response = autoload_operations.discover()
         logger.info('Autoload completed')
@@ -80,8 +83,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
 
-        send_command_operations = CommandRunner(cli=self._cli, logger=logger, resource_config=resource_config, api=api)
+        send_command_operations = RunCommandRunner(logger, cli_handler)
         response = send_command_operations.run_custom_command(custom_command=custom_command)
         return response
 
@@ -100,7 +104,8 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
 
-        send_command_operations = CommandRunner(cli=self._cli, logger=logger, resource_config=resource_config, api=api)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        send_command_operations = RunCommandRunner(logger, cli_handler)
         result_str = send_command_operations.run_custom_config_command(custom_command=custom_command)
         return result_str
 
@@ -120,8 +125,8 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
 
-        connectivity_operations = ConnectivityRunner(cli=self._cli, resource_config=resource_config, api=api,
-                                                     logger=logger)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        connectivity_operations = ConnectivityRunner(cli_handler, logger)
         logger.info('Start applying connectivity changes, request is: {0}'.format(str(request)))
         result = connectivity_operations.apply_connectivity_changes(request=request)
         logger.info('Finished applying connectivity changes, response is: {0}'.format(str(result)))
@@ -145,16 +150,15 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
 
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+
         if not configuration_type:
             configuration_type = 'running'
 
         if not vrf_management_name:
             vrf_management_name = resource_config.vrf_management_name
 
-        configuration_operations = ConfigurationRunner(cli=self._cli,
-                                                       logger=logger,
-                                                       resource_config=resource_config,
-                                                       api=api)
+        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
         logger.info('Save started')
         response = configuration_operations.save(folder_path=folder_path, configuration_type=configuration_type,
                                                  vrf_management_name=vrf_management_name)
@@ -178,6 +182,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
 
         if not configuration_type:
             configuration_type = 'running'
@@ -188,10 +193,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         if not vrf_management_name:
             vrf_management_name = resource_config.vrf_management_name
 
-        configuration_operations = ConfigurationRunner(cli=self._cli,
-                                                       logger=logger,
-                                                       resource_config=resource_config,
-                                                       api=api)
+        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
         logger.info('Restore started')
         configuration_operations.restore(path=path, restore_method=restore_method,
                                          configuration_type=configuration_type,
@@ -216,11 +218,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
 
-        configuration_operations = ConfigurationRunner(cli=self._cli,
-                                                       logger=logger,
-                                                       resource_config=resource_config,
-                                                       api=api)
+        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
 
         logger.info('Orchestration save started')
         response = configuration_operations.orchestration_save(mode=mode, custom_params=custom_params)
@@ -241,11 +241,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
 
-        configuration_operations = ConfigurationRunner(cli=self._cli,
-                                                       logger=logger,
-                                                       resource_config=resource_config,
-                                                       api=api)
+        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
 
         logger.info('Orchestration restore started')
         configuration_operations.orchestration_restore(saved_artifact_info=saved_artifact_info,
@@ -267,12 +265,13 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
 
         if not vrf_management_name:
             vrf_management_name = resource_config.vrf_management_name
 
         logger.info('Start Load Firmware')
-        firmware_operations = FirmwareRunner(cli=self._cli, logger=logger, resource_config=resource_config, api=api)
+        firmware_operations = FirmwareRunner(cli_handler, logger)
         response = firmware_operations.load_firmware(path=path, vrf_management_name=vrf_management_name)
         logger.info('Finish Load Firmware: {}'.format(response))
 
@@ -290,8 +289,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
                                                                   supported_os=self.SUPPORTED_OS,
                                                                   context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
 
-        state_operations = StateRunner(cli=self._cli, logger=logger, api=api, resource_config=resource_config)
+        state_operations = StateRunner(logger, api, resource_config, cli_handler)
         return state_operations.health_check()
 
     def cleanup(self):
