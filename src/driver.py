@@ -298,4 +298,13 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         pass
 
     def shutdown(self, context):
-        pass
+        logger = get_logger_with_thread_id(context)
+        api = get_api(context)
+
+        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
+                                                                  supported_os=self.SUPPORTED_OS,
+                                                                  context=context)
+        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+
+        state_operations = StateRunner(logger, api, resource_config, cli_handler)
+        return state_operations.shutdown()
