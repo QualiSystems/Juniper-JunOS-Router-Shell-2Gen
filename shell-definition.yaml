@@ -3,14 +3,14 @@ tosca_definitions_version: tosca_simple_yaml_1_0
 metadata:
   template_name: Juniper JunOS Router Shell 2G
   template_author: Quali
-  template_version: 1.1.1
+  template_version: 2.0.0
   template_icon: shell-icon.png
 
 description: >
  This Shell supports Juniper Router devices that run JunOS operating system
 
 imports:
-  - cloudshell_standard: cloudshell_networking_standard_5_0_0.yaml
+  - cloudshell_standard: cloudshell_networking_standard_5_0_4.yaml
 
 node_types:
 
@@ -66,6 +66,18 @@ node_types:
           SNMP V3 Private Key:
             description: Relevant only in case SNMP V3 is in use.
             type: string
+          SNMP V3 Authentication Protocol:
+            description: Relevant only in case SNMP V3 is in use.
+            type: string
+            default: No Authentication Protocol
+            constraints:
+              - valid_values: [No Authentication Protocol, MD5, SHA]
+          SNMP V3 Privacy Protocol:
+            description: Relevant only in case SNMP V3 is in use.
+            type: string
+            default: No Privacy Protocol
+            constraints:
+              - valid_values: [No Privacy Protocol, DES, 3DES-EDE, AES-128, AES-192, AES-256]
           SNMP Version:
             type: string
             default: ''
