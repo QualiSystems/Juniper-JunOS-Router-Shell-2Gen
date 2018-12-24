@@ -11,11 +11,11 @@
 
 # **Juniper JunOS Router 2G Shell**  
 
-Release date: April 2017
+Release date: December 2018
 
-Shell version: 1.0.0
+Shell version: 2.0.0
 
-Document version: 1.0
+Document version: 1.1
 
 # In This Guide
 
@@ -40,7 +40,7 @@ The **Juniper JunOS Router 2G** shell provides you with connectivity and managem
 For more information on the **Juniper JunOS Router**, see the official **Juniper** product documentation.
 
 ### Standard version
-**Juniper JunOS Router 2G Shell** is based on the Networking Shell Standard version **5.0.0**.
+**Juniper JunOS Router 2G Shell** is based on the Networking Shell Standard version **5.0.4**.
 
 For detailed information about the shell’s structure and attributes, see the [Networking Shell Standard](https://github.com/QualiSystems/cloudshell-standards/blob/master/Documentation/networking_standard.md) in GitHub.
 
@@ -105,7 +105,7 @@ The shell comprises:
 |File name|Description|
 |:---|:---|
 |JuniperJunosRouterShell2G.zip|Juniper JunOS Router 2G shell package|
-|cloudshell-networking-juniper-junos2-gen-dependencies-package1.0.X.zip|Shell Python dependencies (for offline deployments only)|
+|cloudshell-networking-juniper-junos2-gen-dependencies-package-2.0.X.zip|Shell Python dependencies (for offline deployments only)|
 
 # Importing and Configuring the Shell
 This section describes how to import the **Juniper JunOS Router 2G** shell and configure and modify the shell’s devices.
@@ -156,7 +156,7 @@ For more information, see [Configuring CloudShell to Execute Python Commands in 
 Before PyPi Server was introduced as CloudShell’s python package management mechanism, the `PythonOfflineRepositoryPath` key was used to set the default offline package repository on the Quali Server machine, and could be used on specific Execution Server machines to set a different folder. 
 
 **To set the offline python repository:**
-1. Download the *cloudshell-networking-juniper-junos2-gen-dependencies-package1.0.X.zip* file, see [Downloading the Shell](#downloading-the-shell).
+1. Download the *cloudshell-networking-juniper-junos2-gen-dependencies-package-2.0.X.zip* file, see [Downloading the Shell](#downloading-the-shell).
 
 2. Unzip it to a local repository. Make sure the execution server has access to this folder. 
 
