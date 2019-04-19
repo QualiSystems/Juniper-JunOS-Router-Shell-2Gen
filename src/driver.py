@@ -7,7 +7,11 @@ from cloudshell.devices.runners.run_command_runner import RunCommandRunner
 from cloudshell.devices.runners.state_runner import StateRunner
 from cloudshell.devices.standards.networking.configuration_attributes_structure import \
     create_networking_resource_from_context
-from cloudshell.networking.juniper.cli.juniper_cli_handler import JuniperCliHandler
+
+from cloudshell.cli.service.cli import CLI
+from cloudshell.cli.service.session_pool_manager import SessionPoolManager
+from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliHandler, JuniperCliConfigurator
+from cloudshell.networking.juniper.flows.connectivity_flow import JuniperConnectivity
 from cloudshell.networking.juniper.runners.juniper_connectiviry_runner import \
     JuniperConnectivityRunner as ConnectivityRunner
 from cloudshell.networking.juniper.runners.juniper_configuration_runner import \
@@ -18,6 +22,8 @@ from cloudshell.networking.juniper.snmp.juniper_snmp_handler import JuniperSnmpH
 from cloudshell.networking.networking_resource_driver_interface import NetworkingResourceDriverInterface
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
+from cloudshell.shell_standards.networking.autoload_model import NetworkingResourceModel
+from cloudshell.shell_standards.networking.resource_config import NetworkingResourceConfig
 
 
 class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverInterface, GlobalLock):
@@ -36,12 +42,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :type context: cloudshell.shell.core.context.driver_context.InitCommandContext
         """
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-
+        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, self.SUPPORTED_OS)
         session_pool_size = int(resource_config.sessions_concurrency_limit)
-        self._cli = get_cli(session_pool_size)
+        self._cli = CLI(SessionPoolManager(max_pool_size=session_pool_size, pool_timeout=100))
         return 'Finished initializing'
 
     @GlobalLock.lock
@@ -56,12 +59,11 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         logger = get_logger_with_thread_id(context)
         api = get_api(context)
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
+        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, self.SUPPORTED_OS)
 
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
-        snmp_handler = JuniperSnmpHandler(cli_handler, resource_config, logger, api)
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger, api)
+        snmp_handler = JuniperSnmpHandler(cli_configurator, resource_config, logger, api)
+        resource_model = NetworkingResourceModel.from_resource_config(resource_config)
 
         autoload_operations = AutoloadRunner(cli_handler, snmp_handler, logger, resource_config)
         logger.info('Autoload started')
@@ -121,14 +123,12 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         logger = get_logger_with_thread_id(context)
         api = get_api(context)
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
+        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, self.SUPPORTED_OS)
 
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
-        connectivity_operations = ConnectivityRunner(cli_handler, logger)
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger, api)
+        connectivity_flow = JuniperConnectivity(cli_configurator, logger)
         logger.info('Start applying connectivity changes, request is: {0}'.format(str(request)))
-        result = connectivity_operations.apply_connectivity_changes(request=request)
+        result = connectivity_flow.apply_connectivity_changes(request=request)
         logger.info('Finished applying connectivity changes, response is: {0}'.format(str(result)))
         logger.info('Apply Connectivity changes completed')
         return result
