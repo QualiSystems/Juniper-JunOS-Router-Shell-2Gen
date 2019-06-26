@@ -4,10 +4,9 @@
 from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
 from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliConfigurator
-from cloudshell.networking.juniper.flows.autoload_flow import JuniperAutoload
+from cloudshell.networking.juniper.flows.autoload_flow import JuniperAutoloadFlow
 from cloudshell.networking.juniper.flows.connectivity_flow import JuniperConnectivity
 from cloudshell.networking.juniper.flows.juniper_enable_disable_snmp_flow import JuniperEnableDisableSnmpFlow
-from cloudshell.networking.juniper.snmp.juniper_snmp_handler import JuniperSnmpHandler
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
@@ -56,11 +55,12 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
 
         resource_model = NetworkingResourceModel.from_resource_config(resource_config)
 
-        autoload_operations = JuniperAutoload(snmp_configurator, logger)
-        logger.info('Autoload started')
-        response = autoload_operations.discover(self.SUPPORTED_OS, resource_model)
-        logger.info('Autoload completed')
-        return response
+        with snmp_configurator.get_service() as snmp_service:
+            autoload_operations = JuniperAutoloadFlow(snmp_service, logger)
+            logger.info('Autoload started')
+            response = autoload_operations.discover(self.SUPPORTED_OS, resource_model)
+            logger.info('Autoload completed')
+            return response
 
     def run_custom_command(self, context, custom_command):
         """Send custom command
