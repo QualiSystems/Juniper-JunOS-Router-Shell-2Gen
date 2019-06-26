@@ -1,39 +1,28 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-
-from cloudshell.devices.driver_helper import get_logger_with_thread_id, get_api, get_cli
-from cloudshell.devices.runners.run_command_runner import RunCommandRunner
-from cloudshell.devices.runners.state_runner import StateRunner
-from cloudshell.devices.standards.networking.configuration_attributes_structure import \
-    create_networking_resource_from_context
-
 from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
-from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliHandler, JuniperCliConfigurator
+from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliConfigurator
+from cloudshell.networking.juniper.flows.autoload_flow import JuniperAutoload
 from cloudshell.networking.juniper.flows.connectivity_flow import JuniperConnectivity
-from cloudshell.networking.juniper.runners.juniper_connectiviry_runner import \
-    JuniperConnectivityRunner as ConnectivityRunner
-from cloudshell.networking.juniper.runners.juniper_configuration_runner import \
-    JuniperConfigurationRunner as ConfigurationRunner
-from cloudshell.networking.juniper.runners.juniper_autoload_runner import JuniperAutoloadRunner as AutoloadRunner
-from cloudshell.networking.juniper.runners.juniper_firmware_runner import JuniperFirmwareRunner as FirmwareRunner
+from cloudshell.networking.juniper.flows.juniper_enable_disable_snmp_flow import JuniperEnableDisableSnmpFlow
 from cloudshell.networking.juniper.snmp.juniper_snmp_handler import JuniperSnmpHandler
-from cloudshell.networking.networking_resource_driver_interface import NetworkingResourceDriverInterface
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
-from cloudshell.shell_standards.networking.autoload_model import NetworkingResourceModel
-from cloudshell.shell_standards.networking.resource_config import NetworkingResourceConfig
+from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
+from cloudshell.shell.core.session.logging_session import LoggingSessionContext
+from cloudshell.shell.standards.networking.autoload_model import NetworkingResourceModel
+from cloudshell.shell.standards.networking.driver_interface import NetworkingResourceDriverInterface
+from cloudshell.shell.standards.networking.resource_config import NetworkingResourceConfig
+from cloudshell.snmp.snmp_configurator import EnableDisableSnmpConfigurator
 
 
-class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverInterface, GlobalLock):
+class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverInterface):
     SUPPORTED_OS = [r'[Jj]uniper']
     SHELL_NAME = "Juniper JunOS Router 2G"
 
-    # SHELL_NAME = ""
-
     def __init__(self):
-        super(JuniperJunOSShellDriver, self).__init__()
         self._cli = None
 
     def initialize(self, context):
@@ -42,7 +31,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :type context: cloudshell.shell.core.context.driver_context.InitCommandContext
         """
 
-        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, self.SUPPORTED_OS)
+        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context)
         session_pool_size = int(resource_config.sessions_concurrency_limit)
         self._cli = CLI(SessionPoolManager(max_pool_size=session_pool_size, pool_timeout=100))
         return 'Finished initializing'
@@ -56,18 +45,20 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :rtype: str
         """
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, self.SUPPORTED_OS)
+        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, api, self.SUPPORTED_OS)
 
-        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger, api)
-        snmp_handler = JuniperSnmpHandler(cli_configurator, resource_config, logger, api)
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
+        enable_disable_snmp_flow = JuniperEnableDisableSnmpFlow(cli_configurator, logger)
+        snmp_configurator = EnableDisableSnmpConfigurator(enable_disable_snmp_flow, resource_config, logger)
+
         resource_model = NetworkingResourceModel.from_resource_config(resource_config)
 
-        autoload_operations = AutoloadRunner(cli_handler, snmp_handler, logger, resource_config)
+        autoload_operations = JuniperAutoload(snmp_configurator, logger)
         logger.info('Autoload started')
-        response = autoload_operations.discover()
+        response = autoload_operations.discover(self.SUPPORTED_OS, resource_model)
         logger.info('Autoload completed')
         return response
 
