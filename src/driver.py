@@ -11,6 +11,7 @@ from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.session.logging_session import LoggingSessionContext
+from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
 from cloudshell.shell.standards.networking.autoload_model import NetworkingResourceModel
 from cloudshell.shell.standards.networking.driver_interface import NetworkingResourceDriverInterface
 from cloudshell.shell.standards.networking.resource_config import NetworkingResourceConfig
@@ -69,17 +70,19 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :return: result
         :rtype: str
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
-
-        send_command_operations = RunCommandRunner(logger, cli_handler)
-        response = send_command_operations.run_custom_command(custom_command=custom_command)
+        send_command_operations = RunCommandFlow(logger, cli_configurator)
+        response = send_command_operations.run_custom_command(custom_command)
         return response
 
     def run_custom_config_command(self, context, custom_command):
@@ -89,17 +92,19 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :return: result
         :rtype: str
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
-        send_command_operations = RunCommandRunner(logger, cli_handler)
-        result_str = send_command_operations.run_custom_config_command(custom_command=custom_command)
+        send_command_operations = RunCommandFlow(logger, cli_configurator)
+        result_str = send_command_operations.run_custom_config_command(custom_command)
         return result_str
 
     def ApplyConnectivityChanges(self, context, request):
