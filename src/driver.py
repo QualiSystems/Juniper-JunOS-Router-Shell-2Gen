@@ -9,12 +9,12 @@ from cloudshell.networking.juniper.flows.configuration_flow import JuniperConfig
 from cloudshell.networking.juniper.flows.connectivity_flow import JuniperConnectivity
 from cloudshell.networking.juniper.flows.juniper_enable_disable_snmp_flow import JuniperEnableDisableSnmpFlow
 from cloudshell.networking.juniper.flows.juniper_firmware_flow import JuniperFirmwareFlow
+from cloudshell.networking.juniper.flows.juniper_state_flow import JuniperStateFlow
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.session.logging_session import LoggingSessionContext
 from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
-from cloudshell.shell.flows.state.basic_flow import StateFlow
 from cloudshell.shell.standards.networking.autoload_model import NetworkingResourceModel
 from cloudshell.shell.standards.networking.driver_interface import NetworkingResourceDriverInterface
 from cloudshell.shell.standards.networking.resource_config import NetworkingResourceConfig
@@ -315,7 +315,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         )
         cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        state_operations = StateFlow(resource_config, cli_configurator, api, logger)
+        state_operations = JuniperStateFlow(
+            resource_config, cli_configurator, api, logger
+        )
         return state_operations.health_check()
 
     def cleanup(self):
@@ -333,5 +335,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         )
         cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        state_operations = StateFlow(resource_config, cli_configurator, api, logger)
+        state_operations = JuniperStateFlow(
+            resource_config, cli_configurator, api, logger
+        )
         return state_operations.shutdown()
