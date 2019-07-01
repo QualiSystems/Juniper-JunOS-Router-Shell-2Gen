@@ -13,6 +13,7 @@ from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterf
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
 from cloudshell.shell.core.session.logging_session import LoggingSessionContext
 from cloudshell.shell.flows.command.basic_flow import RunCommandFlow
+from cloudshell.shell.flows.state.basic_flow import StateFlow
 from cloudshell.shell.standards.networking.autoload_model import NetworkingResourceModel
 from cloudshell.shell.standards.networking.driver_interface import NetworkingResourceDriverInterface
 from cloudshell.shell.standards.networking.resource_config import NetworkingResourceConfig
@@ -295,29 +296,34 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :return: Success or Error message
         :rtype: str
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
-
-        state_operations = StateRunner(logger, api, resource_config, cli_handler)
+        state_operations = StateFlow(resource_config, cli_configurator, api, logger)
         return state_operations.health_check()
 
     def cleanup(self):
         pass
 
     def shutdown(self, context):
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        state_operations = StateRunner(logger, api, resource_config, cli_handler)
+        state_operations = StateFlow(resource_config, cli_configurator, api, logger)
         return state_operations.shutdown()
