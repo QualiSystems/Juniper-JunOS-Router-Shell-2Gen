@@ -8,6 +8,7 @@ from cloudshell.networking.juniper.flows.autoload_flow import JuniperAutoloadFlo
 from cloudshell.networking.juniper.flows.configuration_flow import JuniperConfigurationFlow
 from cloudshell.networking.juniper.flows.connectivity_flow import JuniperConnectivity
 from cloudshell.networking.juniper.flows.juniper_enable_disable_snmp_flow import JuniperEnableDisableSnmpFlow
+from cloudshell.networking.juniper.flows.juniper_firmware_flow import JuniperFirmwareFlow
 from cloudshell.shell.core.driver_utils import GlobalLock
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
 from cloudshell.shell.core.session.cloudshell_session import CloudShellSessionContext
@@ -272,20 +273,22 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :param path: full path to firmware file, i.e. tftp://10.10.10.1/firmware.tar
         :param vrf_management_name: VRF management Name
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
-
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
         if not vrf_management_name:
             vrf_management_name = resource_config.vrf_management_name
 
         logger.info('Start Load Firmware')
-        firmware_operations = FirmwareRunner(cli_handler, logger)
+        firmware_operations = JuniperFirmwareFlow(cli_configurator, logger)
         response = firmware_operations.load_firmware(path=path, vrf_management_name=vrf_management_name)
         logger.info('Finish Load Firmware: {}'.format(response))
 
