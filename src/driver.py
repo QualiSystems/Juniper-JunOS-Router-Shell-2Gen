@@ -5,6 +5,7 @@ from cloudshell.cli.service.cli import CLI
 from cloudshell.cli.service.session_pool_manager import SessionPoolManager
 from cloudshell.networking.juniper.cli.juniper_cli_configurator import JuniperCliConfigurator
 from cloudshell.networking.juniper.flows.autoload_flow import JuniperAutoloadFlow
+from cloudshell.networking.juniper.flows.configuration_flow import JuniperConfigurationFlow
 from cloudshell.networking.juniper.flows.connectivity_flow import JuniperConnectivity
 from cloudshell.networking.juniper.flows.juniper_enable_disable_snmp_flow import JuniperEnableDisableSnmpFlow
 from cloudshell.shell.core.driver_utils import GlobalLock
@@ -138,15 +139,16 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :param vrf_management_name: VRF management Name
         :return str saved configuration file name:
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
-
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
         if not configuration_type:
             configuration_type = 'running'
@@ -154,7 +156,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         if not vrf_management_name:
             vrf_management_name = resource_config.vrf_management_name
 
-        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
+        configuration_operations = JuniperConfigurationFlow(
+            resource_config, cli_configurator, logger
+        )
         logger.info('Save started')
         response = configuration_operations.save(folder_path=folder_path, configuration_type=configuration_type,
                                                  vrf_management_name=vrf_management_name)
@@ -171,14 +175,16 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :param restore_method: append or override methods
         :param vrf_management_name: VRF management Name
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
-
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
         if not configuration_type:
             configuration_type = 'running'
@@ -189,7 +195,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         if not vrf_management_name:
             vrf_management_name = resource_config.vrf_management_name
 
-        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
+        configuration_operations = JuniperConfigurationFlow(
+            resource_config, cli_configurator, logger
+        )
         logger.info('Restore started')
         configuration_operations.restore(path=path, restore_method=restore_method,
                                          configuration_type=configuration_type,
@@ -208,15 +216,20 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         if not mode:
             mode = 'shallow'
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
+        configuration_operations = JuniperConfigurationFlow(
+            resource_config, cli_configurator, logger
+        )
 
         logger.info('Orchestration save started')
         response = configuration_operations.orchestration_save(mode=mode, custom_params=custom_params)
@@ -230,16 +243,20 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :param saved_artifact_info: OrchestrationSavedArtifactInfo json
         :param custom_params: json with custom restore parameters
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        resource_config = create_networking_resource_from_context(shell_name=self.SHELL_NAME,
-                                                                  supported_os=self.SUPPORTED_OS,
-                                                                  context=context)
-        cli_handler = JuniperCliHandler(self._cli, resource_config, logger, api)
-
-        configuration_operations = ConfigurationRunner(cli_handler, logger, resource_config, api)
+        configuration_operations = JuniperConfigurationFlow(
+            resource_config, cli_configurator, logger
+        )
 
         logger.info('Orchestration restore started')
         configuration_operations.orchestration_restore(saved_artifact_info=saved_artifact_info,
