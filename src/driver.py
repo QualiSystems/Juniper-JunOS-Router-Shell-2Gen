@@ -118,13 +118,18 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
         :param str request: request json
         :return:
         """
+        logger = LoggingSessionContext.get_logger_with_thread_id(context)
+        api = CloudShellSessionContext(context).get_api()
 
-        logger = get_logger_with_thread_id(context)
-        api = get_api(context)
+        resource_config = NetworkingResourceConfig.from_context(
+            self.SHELL_NAME,
+            context,
+            api,
+            self.SUPPORTED_OS,
+        )
 
-        resource_config = NetworkingResourceConfig.from_context(self.SHELL_NAME, context, self.SUPPORTED_OS)
+        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
-        cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger, api)
         connectivity_flow = JuniperConnectivity(cli_configurator, logger)
         logger.info('Start applying connectivity changes, request is: {0}'.format(str(request)))
         result = connectivity_flow.apply_connectivity_changes(request=request)
