@@ -162,9 +162,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
             if not vrf_management_name:
                 vrf_management_name = resource_config.vrf_management_name
 
-            configuration_operations = JuniperConfigurationFlow(
-                resource_config, logger, cli_configurator
-            )
+            configuration_operations = JuniperConfigurationFlow(resource_config, logger, cli_configurator)
             logger.info('Save started')
             response = configuration_operations.save(folder_path=folder_path, configuration_type=configuration_type,
                                                      vrf_management_name=vrf_management_name)
