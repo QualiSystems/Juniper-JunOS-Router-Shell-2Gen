@@ -322,7 +322,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
             cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
             state_operations = JuniperStateFlow(
-                logger, api, resource_config, cli_configurator
+                logger, resource_config, cli_configurator, api
             )
             return state_operations.health_check()
 
@@ -342,7 +342,7 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
             cli_configurator = JuniperCliConfigurator(self._cli, resource_config, logger)
 
             state_operations = JuniperStateFlow(
-                logger, api, resource_config, cli_configurator
+                logger, resource_config, cli_configurator, api
             )
             return state_operations.shutdown()
 
