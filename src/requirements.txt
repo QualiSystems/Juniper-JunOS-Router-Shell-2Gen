@@ -1,1 +1,7 @@
-cloudshell-networking-juniper>=4.2,<4.3
+cloudshell-networking-juniper>=5.0,<6
+cloudshell-shell-networking-standard==5.0.4
+cloudshell-shell-flows>=1.0,<2
+cloudshell-cli>=4.0,<5
+cloudshell-snmp>=4.0,<5
+cloudshell-automation-api>=9.2
+cloudshell-shell-core>=5.0,<6

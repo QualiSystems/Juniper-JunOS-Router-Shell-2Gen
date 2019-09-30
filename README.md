@@ -11,9 +11,11 @@
 
 # **Juniper JunOS Router 2G Shell**  
 
-Release date: December 2018
+Release date: September 2019
 
-Shell version: 2.0.0
+Shell version: 3.0.0
+
+Python version: 3.7
 
 Document version: 1.1
 
