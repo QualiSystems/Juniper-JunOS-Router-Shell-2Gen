@@ -264,5 +264,5 @@ To connect with Quali users and experts from around the world, ask questions and
 # Release Notes 
 
 ### Known Issues
-* Known issue 15248: Some switches/routers don’t reflect port-channel members correctly in the IEEE 802.3ad Link Aggregation MIB.
-
+* **Known issue #15248**: Some switches/routers don’t reflect port-channel members correctly in the IEEE 802.3ad Link Aggregation MIB.
+* **Known Issue #38226**: Juniper Shell may discover empty or incomplete structure due to an issue in JunOS firmware releases between 15.1R5 and 16.1R6. To fix please upgrade to JunOS 16.1R7-S5.2.
