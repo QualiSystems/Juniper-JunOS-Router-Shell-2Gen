@@ -50,7 +50,7 @@ For detailed information about the shell’s structure and attributes, see the [
 
 Release: **Juniper JunOS Router 2G Shell**
 
-▪ CloudShell version: 8.3 the latest patch and above
+▪ CloudShell version: 9.3 the latest patch and above
 
 ▪ Certified model: Juniper SRX220
 
