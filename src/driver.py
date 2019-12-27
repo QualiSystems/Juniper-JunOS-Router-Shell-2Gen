@@ -272,7 +272,9 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
             logger.info('Orchestration restore completed')
 
         logger.info('Orchestration restore started')
-        restore_params = OrchestrationSaveRestore(logger, resource_config.name).parse_orchestration_save_result
+        restore_params = OrchestrationSaveRestore(
+            logger, resource_config.name
+        ).parse_orchestration_save_result(saved_artifact_info, custom_params)
         configuration_operations.restore(**restore_params)
         logger.info('Orchestration restore completed')
 
