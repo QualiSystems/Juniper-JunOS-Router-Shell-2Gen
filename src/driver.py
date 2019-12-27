@@ -271,12 +271,12 @@ class JuniperJunOSShellDriver(ResourceDriverInterface, NetworkingResourceDriverI
                                                            custom_params=custom_params)
             logger.info('Orchestration restore completed')
 
-        logger.info('Orchestration restore started')
-        restore_params = OrchestrationSaveRestore(
-            logger, resource_config.name
-        ).parse_orchestration_save_result(saved_artifact_info, custom_params)
-        configuration_operations.restore(**restore_params)
-        logger.info('Orchestration restore completed')
+            logger.info('Orchestration restore started')
+            restore_params = OrchestrationSaveRestore(
+                logger, resource_config.name
+            ).parse_orchestration_save_result(saved_artifact_info, custom_params)
+            configuration_operations.restore(**restore_params)
+            logger.info('Orchestration restore completed')
 
     @GlobalLock.lock
     def load_firmware(self, context, path, vrf_management_name):
