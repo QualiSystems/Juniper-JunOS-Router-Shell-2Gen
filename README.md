@@ -9,7 +9,7 @@
 
 Release date: September 2019
 
-Shell version: 3.0.0
+Shell version: 3.0.1
 
 Python version: 3.7
 

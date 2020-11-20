@@ -1,19 +1,67 @@
 language: python
-python:
-    - "3.7"
+python: 3.7
+jobs:
+  include:
+    - if: branch = master
+      env: TOXENV=py37-master
+      after_success: codecov
+    - if: branch != master
+      env: TOXENV=py37-dev
+      after_success: codecov
+    - env: TOXENV=pack
+    - env: TOXENV=pre-commit
+      script: tox
+      install: pip install tox
+    - stage: Create GitHub release
+      before_install:
+        - sudo apt-get update
+        - sudo apt-get -y install jq
+      install:
+        - pip install yq
+        - pip install tox
+      before_deploy:
+        - export AUTHOR_EMAIL="$(git log -1 $TRAVIS_COMMIT --pretty="%cE")"
+        - export AUTHOR_NAME="$(git log -1 $TRAVIS_COMMIT --pretty="%aN")"
+        - git config --local user.name $AUTHOR_NAME
+        - git config --local user.email $AUTHOR_EMAIL
+        - git tag $VERSION
+      script:
+        - tox
+        - export VERSION="$(yq -r .metadata.template_version shell-definition.yaml)"
+        - mv dist/dependencies-win32.zip dist/cloudshell-juniper-dependencies-win32-package-$VERSION.zip
+        - mv dist/dependencies-linux.zip dist/cloudshell-juniper-dependencies-linux-package-$VERSION.zip
+      deploy:
+        provider: releases
+        skip_cleanup: true
+        draft: true
+        api_key:
+          secure: "lhP0ip6lvaPKyGTJ70/Eo4APa11tvn2jh0vdQM9H3ivAeNM5FtPdH2i6sdjli2pSX97y/47Y5bGAMm/q0MCYHM9qr6PUhxCem+ApMDX8hfosFcjcWwwoMlmq78PRO4jDitIZBnvmAJVzZGiixgpXE3KfoMbSm6fnrzM02ALQY/wciSiKy7UZ5MUEBYdZx0be1d0z5RvBGmKdwQi0Ia5KoAFr917RITwjgWfmgDDybcyKgA0pxplsjrPyLhTx/6Ur/GIM4flRndZBD+Tte1aGndcY6h5s8nwnaoFg63L/FRgu+ShqdJfx3RKgDFyXHB1MaWJV+d0P280NQRK00o7tjMvd88sI/eNanPCw9oAYDAfzE9LRkoBZ4iz6qK7Hcw7A3bnlScFDODqPiY+cM4NTis697ruTvv8JRNrvCEtDFKO0OsPDiAh7QXKpBGLyGBLnmQDv5rWfsl+i167YcOuvbTBmTOuy8pH/0lVxtxqmUzH+NOFY5vWN3mak89z1YoQKQrChCayoQ9caCWfF7xy9lGkEuveFiLow7sglZgO8myex/LKbvyQpOa6qt0UCxN1DZvwuZmpXGuI7K0RpYxYILpnsBE5hOS0rWq8aERcbiieKmf0ldUnD17fWB6AVeLvDu7do2OjI6MaKolsXQ5ItU+4QGM5lxKLks+7ZAEil8QU="
+        file_glob: true
+        file: dist/*.zip
+        name: Juniper JunOS Router Shell 2G $GIT_TAG
+        target_commitish: master
+        on:
+          branch: master
+    - stage: Check version
+      before_install:
+        - sudo apt-get update
+        - sudo apt-get -y install jq
+      install:
+        - pip install yq
+        - git clone https://github.com/$TRAVIS_REPO_SLUG.git $TRAVIS_REPO_SLUG
+        - cd $TRAVIS_REPO_SLUG
+        - git checkout -qf $TRAVIS_PULL_REQUEST_BRANCH
+      script: "! diff <(yq .metadata.template_version shell-definition.yaml) <(git show master:shell-definition.yaml > tmp.yaml && yq .metadata.template_version tmp.yaml)"
 
 install:
-    - 'if [ ${TRAVIS_BRANCH} \!= "master" ] && [ -f dev_requirements.txt ]; then
-        pip install --extra-index-url https://testpypi.python.org/pypi -r dev_requirements.txt;
-      else
-        pip install -r src/requirements.txt;
-      fi'
+  - pip install tox
+  - pip install codecov
 
-    - pip install -r test_requirements.txt
-    - pip install codecov
+script: tox
 
-script:
-    - nosetests --with-coverage --cover-package=src tests
-
-after_success:
-    - codecov
+stages:
+  - name: Check version
+    if: branch = master AND type = pull_request
+  - name: Test
+  - name: Create GitHub release
+    if: branch = master AND type != pull_request
